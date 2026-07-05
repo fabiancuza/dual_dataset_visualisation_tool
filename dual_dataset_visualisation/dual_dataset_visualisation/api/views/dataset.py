@@ -59,6 +59,10 @@ class DatasetViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.validate_with_dataset(self.get_object())
 
+        # Aggregator has no MEAN_DIFFERENCE/VAR_DIFFERENCE case, it only knows how to
+        # aggregate one dataset side at a time. So we map to AVG/VAR, run the
+        # Aggregator twice below (once per side), and use the two results into a
+        # difference via DifferenceCalculator later.
         aggregate_function = serializer.validated_data['aggregate_function']
         if aggregate_function in [AggregateFunctions.MEAN_DIFFERENCE]:
             aggregate_function = AggregateFunctions.AVG

@@ -66,33 +66,6 @@ class Aggregator:
             valid_count = Count("id", filter=~Q(**{f"row_data__{self.field_name}__isnull": True}) & Q(**{f"row_data__{self.field_name}__regex": r'^\s*-?\d+(\.\d+)?\s*$'}))
             agg_expr = total_count - valid_count
         elif af == AggregateFunctions.MEDIAN:
-            if PercentileCont is None:
-                # Fallback: compute in Python per group (works on any DB, slower).
-                values = (
-                    qs.values(group_field, f"row_data__{self.field_name}")
-                )
-                buckets = {}
-                for row in values:
-                    gid = row[group_field]
-                    v = row.get(f"row_data__{self.field_name}")
-                    if gid is None or v is None:
-                        continue
-                    try:
-                        v = float(v)
-                    except (TypeError, ValueError):
-                        continue
-                    buckets.setdefault(gid, []).append(v)
-
-                out = {}
-                for gid, arr in buckets.items():
-                    arr.sort()
-                    n = len(arr)
-                    if n == 0:
-                        continue
-                    mid = n // 2
-                    out[gid] = arr[mid] if n % 2 == 1 else (arr[mid - 1] + arr[mid]) / 2.0
-                return out
-
             # Postgres median (continuous percentile 0.5)
             agg_expr = PercentileCont(value_expr, 0.5)
         elif af == AggregateFunctions.VAR:

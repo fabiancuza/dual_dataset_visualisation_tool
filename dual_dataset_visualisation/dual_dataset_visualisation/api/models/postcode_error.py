@@ -4,6 +4,13 @@ from .dataset import Dataset
 
 
 class PostcodeError(models.Model):
+    """
+    One row per distinct unresolvable postcode value. Each time that
+    value fails to resolve during processing a new PostcodeErrorReport
+    links it to the Dataset where it occurred, so the same bad postcode
+    across multiple uploads accumulates reports rather than duplicate
+    PostcodeError rows.
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     value = models.CharField(max_length=4, unique=True)
 

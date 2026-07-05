@@ -16,6 +16,13 @@ def resolve_postcode_digits_only(s: str, all_postcodes: set[str], dataset: Datas
     """
     s: digits-only string (already normalized)
     returns a postcode string that exists in all_postcodes, or None
+
+    Only the last 1-2 digits are potentially changed (never the prefix)
+    because the synthetic generation pipeline sometimes returns
+    postcodes that don't exist. This way we stay in the same municipality.
+
+    Side effect: if no candidate matches, records a PostcodeErrorReport for
+    (s, dataset) before returning None.
     """
     if not s:
         return None, False
@@ -55,6 +62,11 @@ def resolve_postcode_digits_only(s: str, all_postcodes: set[str], dataset: Datas
     )
 
     return None, False
+
+# Two variants because a FileField backed by local disk exposes a real path
+# (fast path: count lines directly), while remote storage (e.g. S3) doesn't —
+# it has to be read through the file-like object instead. Both subtract 1
+# for the header row.
 
 
 def count_csv_rows_path(path: str) -> int:
