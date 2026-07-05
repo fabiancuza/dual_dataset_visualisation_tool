@@ -1,0 +1,15 @@
+# requirements.txt
+Django>=5.0
+djangorestframework
+loguru
+psycopg[binary]
+python-dotenv
+celery
+redis
+pandas
+requests
+urllib3
+drf-yasg
+django-cors-headers
+gunicorn
+whitenoise

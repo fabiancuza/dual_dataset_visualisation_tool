@@ -1,0 +1,85 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dual_dataset_visualisation
+      POSTGRES_USER: dual_dataset_visualisation
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dual_dataset_visualisation -d dual_dataset_visualisation"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./dual_dataset_visualisation
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_NAME: dual_dataset_visualisation
+      DB_USER: dual_dataset_visualisation
+      DB_PASSWORD: ""
+      DB_HOST: db
+      DB_PORT: 5432
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - media_files:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+  
+  celery:
+    build:
+      context: ./dual_dataset_visualisation
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A dual_dataset_visualisation worker --loglevel=info
+    environment:
+      DB_NAME: dual_dataset_visualisation
+      DB_USER: dual_dataset_visualisation
+      DB_PASSWORD: ""
+      DB_HOST: db
+      DB_PORT: 5432
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - media_files:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./dual_dataset_visualisation_frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000/api
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+  media_files:
